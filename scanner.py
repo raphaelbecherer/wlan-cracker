@@ -198,22 +198,28 @@ class NetworkScanner:
         print_status(f"Scanning for networks on {self.interface} ({timeout}s)...")
         print()
 
-        try:
-            sniff(
-                iface=self.interface,
-                prn=self._packet_handler,
-                timeout=timeout,
-                store=False,
-                stop_filter=lambda _: self._stop_event.is_set()
-            )
-        except PermissionError:
-            from utils import print_error
-            print_error("Permission denied. Run as root/sudo.")
-            return {}
-        except OSError as e:
-            from utils import print_error
-            print_error(f"Interface error: {e}")
-            return {}
+        for _attempt in range(3):
+            try:
+                sniff(
+                    iface=self.interface,
+                    prn=self._packet_handler,
+                    timeout=timeout,
+                    store=False,
+                    stop_filter=lambda _: self._stop_event.is_set()
+                )
+                break
+            except PermissionError:
+                from utils import print_error
+                print_error("Permission denied. Run as root/sudo.")
+                return {}
+            except OSError as e:
+                if _attempt < 2 and not self._stop_event.is_set():
+                    print_warning(f"Interface error: {e} - retrying in 2s...")
+                    time.sleep(2)
+                else:
+                    from utils import print_error
+                    print_error(f"Interface error: {e}")
+                    return {}
 
         return self.access_points
 
@@ -267,16 +273,23 @@ class NetworkScanner:
                         detected_channel[0] = ch
                         self._stop_event.set()
 
-        try:
-            sniff(
-                iface=self.interface,
-                prn=_handler,
-                timeout=timeout,
-                store=False,
-                stop_filter=lambda _: self._stop_event.is_set()
-            )
-        except (PermissionError, OSError):
-            pass
+        for _attempt in range(3):
+            try:
+                sniff(
+                    iface=self.interface,
+                    prn=_handler,
+                    timeout=timeout,
+                    store=False,
+                    stop_filter=lambda _: self._stop_event.is_set()
+                )
+                break
+            except PermissionError:
+                break
+            except OSError:
+                if _attempt < 2 and not self._stop_event.is_set():
+                    time.sleep(2)
+                else:
+                    break
 
         return detected_channel[0]
 

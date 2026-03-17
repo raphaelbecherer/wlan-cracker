@@ -81,6 +81,8 @@ class MonitorMode:
                 )
                 if "Mode:Monitor" in check.stdout:
                     self.monitor_interface = candidate
+                    # Allow kernel to fully initialize the new interface
+                    time.sleep(2)
                     print_success(f"Monitor mode enabled: {self.monitor_interface}")
                     return self.monitor_interface
 
@@ -107,6 +109,7 @@ class MonitorMode:
             )
             if "Mode:Monitor" in check.stdout:
                 self.monitor_interface = self.interface
+                time.sleep(2)
                 print_success(f"Monitor mode enabled: {self.monitor_interface}")
                 return self.monitor_interface
         except (subprocess.TimeoutExpired, FileNotFoundError):
@@ -213,4 +216,5 @@ class MonitorMode:
         """Set a specific channel on the monitor interface."""
         if self.monitor_interface:
             set_channel(self.monitor_interface, channel)
+            time.sleep(0.5)
             print_status(f"Set channel to {channel}")

@@ -137,21 +137,27 @@ class HandshakeCapture:
             f"(timeout: {timeout}s)..."
         )
 
-        try:
-            sniff(
-                iface=self.interface,
-                prn=self._packet_handler,
-                lfilter=lambda p: p.haslayer(EAPOL),
-                timeout=timeout,
-                store=False,
-                stop_filter=lambda _: self._stop_event.is_set()
-            )
-        except PermissionError:
-            print_error("Permission denied. Run as root/sudo.")
-            return None
-        except OSError as e:
-            print_error(f"Interface error: {e}")
-            return None
+        for _attempt in range(3):
+            try:
+                sniff(
+                    iface=self.interface,
+                    prn=self._packet_handler,
+                    lfilter=lambda p: p.haslayer(EAPOL),
+                    timeout=timeout,
+                    store=False,
+                    stop_filter=lambda _: self._stop_event.is_set()
+                )
+                break
+            except PermissionError:
+                print_error("Permission denied. Run as root/sudo.")
+                return None
+            except OSError as e:
+                if _attempt < 2 and not self._stop_event.is_set():
+                    print_warning(f"Interface error: {e} - retrying in 2s...")
+                    time.sleep(2)
+                else:
+                    print_error(f"Interface error: {e}")
+                    return None
 
         return self._save_capture()
 
@@ -355,21 +361,27 @@ class PassiveCapture:
         print_warning("  This may take several minutes. Wait for clients to reconnect naturally.")
         print()
 
-        try:
-            sniff(
-                iface=self.interface,
-                prn=self._packet_handler,
-                lfilter=lambda p: p.haslayer(EAPOL) or p.haslayer(Dot11Beacon),
-                timeout=timeout,
-                store=False,
-                stop_filter=lambda _: self._stop_event.is_set()
-            )
-        except PermissionError:
-            print_error("Permission denied. Run as root/sudo.")
-            return None
-        except OSError as e:
-            print_error(f"Interface error: {e}")
-            return None
+        for _attempt in range(3):
+            try:
+                sniff(
+                    iface=self.interface,
+                    prn=self._packet_handler,
+                    lfilter=lambda p: p.haslayer(EAPOL) or p.haslayer(Dot11Beacon),
+                    timeout=timeout,
+                    store=False,
+                    stop_filter=lambda _: self._stop_event.is_set()
+                )
+                break
+            except PermissionError:
+                print_error("Permission denied. Run as root/sudo.")
+                return None
+            except OSError as e:
+                if _attempt < 2 and not self._stop_event.is_set():
+                    print_warning(f"Interface error: {e} - retrying in 2s...")
+                    time.sleep(2)
+                else:
+                    print_error(f"Interface error: {e}")
+                    return None
 
         return self._save_capture()
 

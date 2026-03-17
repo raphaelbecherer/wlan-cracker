@@ -144,9 +144,10 @@ class DeauthAttack:
 
                     self.packets_sent += 1
                 except OSError as e:
-                    from utils import print_error
-                    print_error(f"Send error: {e}")
-                    return
+                    # Interface may not be ready yet, wait and retry
+                    print_warning(f"Send error: {e} - retrying in 2s...")
+                    time.sleep(2)
+                    continue
 
                 time.sleep(self._get_delay(interval))
 

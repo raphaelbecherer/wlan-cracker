@@ -12,7 +12,10 @@
       "Bash(grep -h \"^import\\\\|^from\" *.py)",
       "Bash(wc -l *.py)",
       "Bash(python -c \"import ast; ast.parse\\(open\\(''tui.py''\\).read\\(\\)\\); print\\(''tui.py: OK''\\)\")",
-      "Bash(python -c \"import ast; ast.parse\\(open\\(''main.py''\\).read\\(\\)\\); print\\(''main.py: OK''\\)\")"
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''main.py''\\).read\\(\\)\\); print\\(''main.py: OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''tui.py''\\).read\\(\\)\\); print\\(''tui.py OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''pmkid.py''\\).read\\(\\)\\); print\\(''pmkid.py OK''\\)\")",
+      "Bash(python -c \":*)"
     ]
   }
 }
