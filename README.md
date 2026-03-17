@@ -74,7 +74,7 @@ Automates WPA/WPA2 handshake capture via deauthentication attacks and integrates
 ## Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/lan-packet-cracker.git
+git clone https://github.com/raphaelbecherer/wlan-cracker
 cd lan-packet-cracker
 pip install -r requirements.txt
 ```

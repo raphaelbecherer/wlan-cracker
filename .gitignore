@@ -1,0 +1,41 @@
+# Claude Code
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Captures and reports (may contain sensitive data)
+captures/
+reports/
+wordlists/
+*.pcap
+*.hc22000
+*.potfile
+*.hashcat
+
+# PMK databases
+*.db
+
+# Generated files
+*.rules
+*_mutated.txt
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
