@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''main.py''\\).read\\(\\)\\); print\\(''main.py OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''hashcat_cracker.py''\\).read\\(\\)\\); print\\(''hashcat_cracker.py OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''config.py''\\).read\\(\\)\\); print\\(''config.py OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''scanner.py''\\).read\\(\\)\\); print\\(''scanner.py OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''monitor.py''\\).read\\(\\)\\); print\\(''monitor.py OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''capture.py''\\).read\\(\\)\\); print\\(''capture.py OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''deauth.py''\\).read\\(\\)\\); print\\(''deauth.py OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''mac_changer.py''\\).read\\(\\)\\); print\\(''mac_changer.py OK''\\)\")",
+      "Bash(grep -h \"^import\\\\|^from\" *.py)",
+      "Bash(wc -l *.py)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''tui.py''\\).read\\(\\)\\); print\\(''tui.py: OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''main.py''\\).read\\(\\)\\); print\\(''main.py: OK''\\)\")"
+    ]
+  }
+}
