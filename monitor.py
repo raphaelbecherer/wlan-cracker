@@ -54,6 +54,28 @@ class MonitorMode:
             print_error(f"Monitor mode not supported on {plat}.")
             return None
 
+    def _verify_interface_ready(self, interface, retries=5, delay=1):
+        """Wait until the monitor interface is fully ready for packet injection/sniffing."""
+        for i in range(retries):
+            try:
+                check = subprocess.run(
+                    ["iwconfig", interface],
+                    capture_output=True, text=True, timeout=5
+                )
+                if "Mode:Monitor" in check.stdout and check.returncode == 0:
+                    # Also verify via /sys that the interface is up
+                    up_check = subprocess.run(
+                        ["ip", "link", "show", interface],
+                        capture_output=True, text=True, timeout=5
+                    )
+                    if "UP" in up_check.stdout:
+                        return True
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                pass
+            if i < retries - 1:
+                time.sleep(delay)
+        return False
+
     def _enable_linux(self):
         """Enable monitor mode on Linux."""
         # Kill interfering processes
@@ -63,6 +85,8 @@ class MonitorMode:
                 [AIRMON_BIN, "check", "kill"],
                 capture_output=True, timeout=10
             )
+            # Give the system time to release the interface after killing processes
+            time.sleep(1)
 
         # Try airmon-ng first
         if AIRMON_BIN:
@@ -73,6 +97,8 @@ class MonitorMode:
             )
 
             # airmon-ng may rename the interface (e.g., wlan0 -> wlan0mon)
+            # Wait a moment for the kernel to finish creating the new interface
+            time.sleep(1)
             for suffix in ["mon", ""]:
                 candidate = f"{self.interface}{suffix}"
                 check = subprocess.run(
@@ -81,9 +107,11 @@ class MonitorMode:
                 )
                 if "Mode:Monitor" in check.stdout:
                     self.monitor_interface = candidate
-                    # Allow kernel to fully initialize the new interface
-                    time.sleep(2)
-                    print_success(f"Monitor mode enabled: {self.monitor_interface}")
+                    # Wait for interface to be fully ready (UP state + monitor mode confirmed)
+                    if self._verify_interface_ready(self.monitor_interface, retries=5, delay=1):
+                        print_success(f"Monitor mode enabled: {self.monitor_interface}")
+                    else:
+                        print_warning(f"Monitor mode enabled but interface may not be fully ready: {self.monitor_interface}")
                     return self.monitor_interface
 
         # Fallback: manual method with ip/iwconfig
@@ -102,14 +130,9 @@ class MonitorMode:
                 capture_output=True, timeout=5
             )
 
-            # Verify
-            check = subprocess.run(
-                ["iwconfig", self.interface],
-                capture_output=True, text=True, timeout=5
-            )
-            if "Mode:Monitor" in check.stdout:
+            # Verify and wait for interface readiness
+            if self._verify_interface_ready(self.interface, retries=5, delay=1):
                 self.monitor_interface = self.interface
-                time.sleep(2)
                 print_success(f"Monitor mode enabled: {self.monitor_interface}")
                 return self.monitor_interface
         except (subprocess.TimeoutExpired, FileNotFoundError):

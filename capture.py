@@ -2,6 +2,7 @@
 
 import os
 import time
+import subprocess
 import threading
 from datetime import datetime
 
@@ -9,6 +10,18 @@ from scapy.all import Dot11, Dot11Beacon, EAPOL, sniff, wrpcap
 
 from config import CAPTURES_DIR, HANDSHAKE_TIMEOUT
 from utils import print_status, print_success, print_error, print_warning, print_info, Colors
+
+
+def _check_interface_exists(interface):
+    """Check if a monitor mode interface still exists and is usable."""
+    try:
+        result = subprocess.run(
+            ["iwconfig", interface],
+            capture_output=True, text=True, timeout=5
+        )
+        return result.returncode == 0 and "No such device" not in result.stderr
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return False
 
 
 class HandshakeCapture:
@@ -153,6 +166,10 @@ class HandshakeCapture:
                 return None
             except OSError as e:
                 if _attempt < 2 and not self._stop_event.is_set():
+                    # Verify interface still exists before retrying
+                    if not _check_interface_exists(self.interface):
+                        print_error(f"Interface {self.interface} is no longer available.")
+                        return None
                     print_warning(f"Interface error: {e} - retrying in 2s...")
                     time.sleep(2)
                 else:
@@ -377,6 +394,10 @@ class PassiveCapture:
                 return None
             except OSError as e:
                 if _attempt < 2 and not self._stop_event.is_set():
+                    # Verify interface still exists before retrying
+                    if not _check_interface_exists(self.interface):
+                        print_error(f"Interface {self.interface} is no longer available.")
+                        return None
                     print_warning(f"Interface error: {e} - retrying in 2s...")
                     time.sleep(2)
                 else:

@@ -115,10 +115,16 @@ class PMKIDAttack:
                 return
             except OSError as e:
                 if attempt < retries - 1 and not self._stop_event.is_set():
+                    # Verify the interface still exists before retrying
+                    if not self._wait_for_interface(retries=2, delay=2):
+                        print_error(f"Interface {self.interface} is gone. Cannot continue sniffing.")
+                        self._stop_event.set()
+                        return
                     print_warning(f"Sniff error: {e} - retrying in 2s...")
                     time.sleep(2)
                 else:
                     print_error(f"Interface error: {e}")
+                    self._stop_event.set()
 
     def _build_auth_request(self):
         """Build an authentication request frame."""
@@ -287,6 +293,8 @@ class PMKIDAttack:
         assoc_pkt = self._build_assoc_request()
 
         attempts = 0
+        consecutive_errors = 0
+        max_consecutive_errors = 5
         while not self._stop_event.is_set() and attempts < (timeout // 2):
             try:
                 # Send authentication request
@@ -296,13 +304,19 @@ class PMKIDAttack:
                 # Send association request
                 sendp(assoc_pkt, iface=self.interface, verbose=False)
                 attempts += 1
+                consecutive_errors = 0  # Reset on success
 
                 if attempts % 5 == 0:
                     print(f"  Attempts: {attempts}", end="\r")
 
             except OSError as e:
-                # Interface may not be ready yet, wait and retry
-                print_warning(f"Send error: {e} - retrying in 2s...")
+                consecutive_errors += 1
+                attempts += 1  # Count errors as attempts to avoid infinite loop
+                if consecutive_errors >= max_consecutive_errors:
+                    print_error(f"Interface lost ({e}). Aborting after {consecutive_errors} consecutive failures.")
+                    self._stop_event.set()
+                    break
+                print_warning(f"Send error: {e} - retrying in 2s... ({consecutive_errors}/{max_consecutive_errors})")
                 time.sleep(2)
                 continue
 

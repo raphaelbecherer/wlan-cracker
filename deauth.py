@@ -13,7 +13,7 @@ from config import (
     DEAUTH_JITTER_MIN, DEAUTH_JITTER_MAX,
     DEAUTH_BURST_JITTER_MIN, DEAUTH_BURST_JITTER_MAX,
 )
-from utils import print_status, print_success, print_warning, print_info, Colors
+from utils import print_status, print_success, print_error, print_warning, print_info, Colors
 
 # Deauth reason codes - rotating through these avoids signature detection
 DEAUTH_REASONS = [
@@ -112,6 +112,9 @@ class DeauthAttack:
         if self.evasion:
             print_info("  Evasion: random jitter, rotating reason codes, random burst gaps")
 
+        consecutive_errors = 0
+        max_consecutive_errors = 5
+
         for burst in range(bursts):
             if self._stop_event.is_set():
                 break
@@ -143,9 +146,14 @@ class DeauthAttack:
                             sendp(pkt2, iface=self.interface, verbose=False)
 
                     self.packets_sent += 1
+                    consecutive_errors = 0  # Reset on success
                 except OSError as e:
-                    # Interface may not be ready yet, wait and retry
-                    print_warning(f"Send error: {e} - retrying in 2s...")
+                    consecutive_errors += 1
+                    if consecutive_errors >= max_consecutive_errors:
+                        print_error(f"Interface lost ({e}). Aborting after {consecutive_errors} consecutive failures.")
+                        self._stop_event.set()
+                        break
+                    print_warning(f"Send error: {e} - retrying in 2s... ({consecutive_errors}/{max_consecutive_errors})")
                     time.sleep(2)
                     continue
 
